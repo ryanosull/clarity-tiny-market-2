@@ -1,30 +1,41 @@
+;; sip009-nft
+;; A SIP009-compliant NFT with a mint function.
 
-;; title: sip009-nft
-;; version:
-;; summary:
-;; description:
+(impl-trait 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.nft-trait)
 
-;; traits
-;;
+(define-constant contract-owner tx-sender)
 
-;; token definitions
-;;
+(define-constant err-owner-only (err u100))
+(define-constant err-token-id-failure (err u101))
+(define-constant err-not-token-owner (err u102))
 
-;; constants
-;;
+(define-non-fungible-token stacksies uint)
+(define-data-var token-id-nonce uint u0)
 
-;; data vars
-;;
+(define-read-only (get-last-token-id)
+	(ok (var-get token-id-nonce))
+)
 
-;; data maps
-;;
+(define-read-only (get-token-uri (token-id uint))
+	(ok none)
+)
 
-;; public functions
-;;
+(define-read-only (get-owner (token-id uint))
+	(ok (nft-get-owner? stacksies token-id))
+)
 
-;; read only functions
-;;
+(define-public (transfer (token-id uint) (sender principal) (recipient principal))
+	(begin
+		(asserts! (is-eq tx-sender sender) err-not-token-owner)
+		(nft-transfer? stacksies token-id sender recipient)
+	)
+)
 
-;; private functions
-;;
-
+(define-public (mint (recipient principal))
+	(let ((token-id (+ (var-get token-id-nonce) u1)))
+		(asserts! (is-eq tx-sender contract-owner) err-owner-only)
+		(try! (nft-mint? stacksies token-id recipient))
+		(asserts! (var-set token-id-nonce token-id) err-token-id-failure)
+		(ok token-id)
+	)
+)
